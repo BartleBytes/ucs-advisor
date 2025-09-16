@@ -13,7 +13,7 @@ Suggests schedules, checks time conflicts, and validates prerequisites using loc
 </video>
 
 ---
-
+## TESTER
 ## ✨ Features
 - 📚 RAG over a local course catalog (ChromaDB)
 - 🤖 Local LLM via Ollama (`llama3`), embeddings via `nomic-embed-text`
@@ -28,4 +28,4 @@ Suggests schedules, checks time conflicts, and validates prerequisites using loc
 pip install -r requirements.txt
 ollama pull llama3
 ollama pull nomic-embed-text
-
+ 
