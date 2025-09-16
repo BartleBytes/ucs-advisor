@@ -8,7 +8,7 @@ Suggests schedules, checks time conflicts, and validates prerequisites using loc
 ## 🚀 Demo
 
 <!-- Autoplaying, looping, silent video (like a GIF) -->
-<video src="docs/demo.mp4" width="800" autoplay loop muted playsinline poster="docs/demo_poster.jpg">
+<video src="docs/Rag.mp4" width="800" autoplay loop muted playsinline poster="docs/demo_poster.jpg">
   Your browser does not support the video tag.
 </video>
 
