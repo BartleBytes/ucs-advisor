@@ -1,0 +1,50 @@
+course_id,title,credits,days,start_time,end_time,instructor,prerequisites,term,campus,modality
+BANA-6000,Statistics for Business Analytics,3,T,16:00,17:15,Dr. Lee,,Fall 2025,Denver,Hybrid
+BANA-6619,Forecasting & Time Series,3,WF,13:00,14:15,Dr. Lee,BANA-6000,Fall 2025,Auraria Online,Online
+BANA-6620,Experiment Design,3,MWF,08:00,08:50,Dr. Gomez,,Fall 2025,Auraria Online,Online
+BANA-6621,Advanced Analytics,3,WF,14:30,15:45,Dr. Kim,"BANA-6000,BANA-6000",Spring 2026,Auraria Online,In-Person
+BANA-6622,Advanced Analytics,3,WF,11:30,12:45,Prof. Romero,,Spring 2026,Auraria Online,Online
+BANA-6623,Advanced Analytics,3,MW,13:00,14:15,Dr. Shah,"BANA-6000,BANA-6000",Spring 2026,Auraria Online,Online
+BANA-6624,Experiment Design,3,MWF,10:00,10:50,Dr. Nguyen,,Spring 2026,Denver,Hybrid
+BANA-6625,Forecasting & Time Series,3,T,13:00,14:15,Prof. Romero,BANA-6000,Fall 2025,Denver,Online
+BANA-6626,Experiment Design,3,R,13:00,14:15,Dr. Allen,BANA-6000,Fall 2025,Denver,Hybrid
+BANA-6637,Big Data Systems,3,R,13:00,14:15,Dr. Lee,BANA-6613,Fall 2025,Denver,Online
+BANA-6638,Data Visualization,3,T,13:00,14:15,Dr. Lee,,Fall 2025,Denver,Hybrid
+BANA-6639,Data Visualization,3,WF,16:00,17:15,Dr. Nguyen,"BANA-6612,BANA-6614",Spring 2026,Auraria Online,Hybrid
+BANA-6640,Data Visualization,3,WF,10:00,11:15,Dr. Khan,"BANA-6613,BANA-6615",Fall 2025,Denver,Hybrid
+BANA-6641,Big Data Systems,3,MWF,10:00,10:50,Dr. Shah,"BANA-6615,BANA-6614",Spring 2026,Auraria Online,In-Person
+BANA-6642,Big Data Systems,3,MW,14:30,15:45,Dr. Allen,BANA-6616,Spring 2026,Auraria Online,Hybrid
+BANA-6643,Data Visualization,3,T,13:00,14:15,Dr. Gomez,"BANA-6616,BANA-6614",Spring 2026,Denver,Hybrid
+BANA-6644,Big Data Systems,3,R,16:00,17:15,Dr. Chen,BANA-6611,Spring 2026,Denver,In-Person
+CSCI-1000,Computational Thinking,3,MWF,08:00,08:50,Dr. Gomez,,Fall 2025,Denver,Online
+CSCI-2000,Object-Oriented Programming,4,WF,11:30,12:45,Dr. Kim,CSCI-1000,Spring 2026,Denver,Hybrid
+CSCI-3000,Algorithms,3,R,16:00,17:15,Dr. Zhou,CSCI-2000,Fall 2025,Denver,Online
+CSCI-4000,Software Engineering,3,R,13:00,14:15,Prof. Romero,,Spring 2026,Auraria Online,Online
+CSCI-5000,Cloud & DevOps,3,TR,13:00,14:15,Dr. Khan,,Fall 2025,Denver,Online
+ECON-1000,Principles of Macroeconomics,4,MWF,12:00,12:50,Dr. Smith,,Fall 2025,Auraria Online,Online
+ECON-3000,Intermediate Macroeconomics,3,R,14:30,15:45,Dr. Lee,ECON-1000,Spring 2026,Auraria Online,Online
+ECON-4000,Game Theory,3,WF,08:30,09:45,Dr. Zhou,ECON-3000,Fall 2025,Auraria Online,Hybrid
+ECON-5000,Advanced Econometrics,3,TR,11:30,12:45,Dr. Allen,ECON-4000,Fall 2025,Auraria Online,In-Person
+ISMG-3000,Systems Analysis & Design,4,MW,10:00,11:15,Dr. Lee,,Fall 2025,Denver,In-Person
+ISMG-4000,Enterprise Data Warehousing,3,MW,10:00,11:15,Dr. Nguyen,ISMG-3000,Spring 2026,Denver,In-Person
+ISMG-6000,Analytics in Enterprise,3,MW,16:00,17:15,Dr. Gomez,,Spring 2026,Denver,In-Person
+MATH-1000,Precalculus,4,T,16:00,17:15,Dr. Zhou,,Fall 2025,Denver,In-Person
+MATH-1409,Calculus I,3,R,14:30,15:45,Dr. Smith,MATH-1000,Fall 2025,Auraria Online,In-Person
+MATH-1410,Calculus I,3,T,13:00,14:15,Dr. Shah,,Spring 2026,Auraria Online,Online
+MATH-1411,Calculus I,3,T,10:00,11:15,Dr. Smith,MATH-1000,Spring 2026,Denver,Online
+MATH-1412,Calculus I,3,MWF,13:00,13:50,Dr. Park,MATH-1000,Spring 2026,Denver,Online
+MATH-1413,Calculus I,3,R,13:00,14:15,Prof. Romero,"MATH-1000,MATH-1000",Spring 2026,Denver,In-Person
+MATH-1414,Calculus I,3,T,14:30,15:45,Prof. Romero,MATH-1000,Fall 2025,Auraria Online,Hybrid
+MATH-1415,Calculus I,4,WF,13:00,14:15,Dr. Kim,MATH-1000,Fall 2025,Auraria Online,Online
+MATH-1416,Calculus I,3,MW,14:30,15:45,Dr. Lee,MATH-1000,Fall 2025,Auraria Online,In-Person
+MATH-2417,Calculus II,4,MWF,09:00,09:50,Dr. Park,MATH-1406,Fall 2025,Auraria Online,Hybrid
+MATH-2418,Calculus II,3,WF,13:00,14:15,Dr. Chen,MATH-1402,Fall 2025,Denver,Hybrid
+MATH-2419,Calculus II,3,MWF,12:00,12:50,Dr. Khan,"MATH-1406,MATH-1405",Fall 2025,Auraria Online,In-Person
+MATH-2420,Calculus II,4,WF,14:30,15:45,Dr. Rivera,"MATH-1404,MATH-1403",Spring 2026,Denver,Online
+MATH-2421,Calculus II,4,R,11:30,12:45,Dr. Kim,,Fall 2025,Auraria Online,Hybrid
+MATH-2422,Calculus II,3,TR,11:30,12:45,Prof. Patel,MATH-1404,Fall 2025,Denver,In-Person
+MATH-2423,Calculus II,3,R,10:00,11:15,Prof. Romero,"MATH-1404,MATH-1401",Spring 2026,Auraria Online,Online
+MATH-2424,Calculus II,3,WF,13:00,14:15,Dr. Rivera,MATH-1403,Spring 2026,Auraria Online,In-Person
+MATH-3000,Discrete Mathematics,3,WF,14:30,15:45,Dr. Hart,"MATH-2401,MATH-2404",Fall 2025,Auraria Online,Hybrid
+MATH-4000,Real Analysis,4,T,16:00,17:15,Prof. Romero,MATH-3000,Fall 2025,Denver,Online
+MATH-5000,Optimization,3,MW,16:00,17:15,Dr. Hart,MATH-4000,Spring 2026,Auraria Online,Online
