@@ -154,5 +154,5 @@ def advise(q: str):
 
 if __name__ == "__main__":
     # Choose one: CLI or API
-    # uvicorn.run(api, host="0.0.0.0", port=8000)
-    cli()
+     uvicorn.run(api, host="0.0.0.0", port=8000)
+   # cli()
