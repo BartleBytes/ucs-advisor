@@ -1,8 +1,9 @@
 # ui_streamlit.py
 import requests
 import streamlit as st
+import os 
 
-API_URL = "http://127.0.0.1:8000/advise"
+API_URL = os.getenv("API_URL", "http://127.0.0.1:8000/advise")
 
 st.set_page_config(page_title="UCD Advisor", page_icon="🎓", layout="centered")
 st.title("🎓 UCD Advisor (Local Llama RAG)")
