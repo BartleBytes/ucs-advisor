@@ -4,11 +4,15 @@ from dotenv import load_dotenv
 from langchain_community.embeddings import OllamaEmbeddings
 from langchain_community.vectorstores import Chroma
 from langchain_core.documents import Document
+from langchain_openai import OpenAIEmbeddings
 
 def main():
     load_dotenv()
-    embed_model = os.getenv("EMBED_MODEL", "nomic-embed-text")
+    embed_model = os.getenv("EMBED_MODEL", os.getenv("OPENAI_EMBED_MODEL", "text-embedding-3-small"))
     ollama_host = os.getenv("OLLAMA_HOST", "http://localhost:11434")
+    backend = os.getenv("LLM_BACKEND", "ollama").lower()
+    openai_key = os.getenv("OPENAI_API_KEY") or os.getenv("LLM_OPENAI_API_KEY")
+
 
     # Load course data
     df = pd.read_csv("data/courses.csv")
@@ -31,8 +35,14 @@ def main():
         docs.append(Document(page_content=text, metadata={"course_id": r["course_id"]}))
 
     # Build embeddings and persist to Chroma
-    emb = OllamaEmbeddings(model=embed_model, base_url=ollama_host)
-    persist_dir = "chroma_ucd"
+    if backend == "openai":
+        if not openai_key:
+            raise RuntimeError("OPENAI_API_KEY is required when LLM_BACKEND=openai")
+        emb = OpenAIEmbeddings(model=embed_model, api_key=openai_key)
+    else:
+        emb = OllamaEmbeddings(model=embed_model, base_url=ollama_host)
+    persist_dir = os.getenv("CHROMA_DIR", "chroma_ucd")
+
     vs = Chroma.from_documents(docs, emb, persist_directory=persist_dir)
     vs.persist()
     print(f"Index built: {persist_dir}/")

@@ -6,9 +6,7 @@ import pandas as pd
 from dotenv import load_dotenv
 
 from langchain_community.vectorstores import Chroma
-from langchain_community.embeddings import OllamaEmbeddings
-from langchain_community.chat_models import ChatOllama
-from langchain_openai import ChatOpenAI
+from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 
@@ -18,17 +16,20 @@ import uvicorn
 # ---------- env & data ----------
 load_dotenv()
 
-BACKEND = os.getenv("LLM_BACKEND", "ollama")
-CHAT_MODEL = os.getenv("CHAT_MODEL", "llama3")
-EMBED_MODEL = os.getenv("EMBED_MODEL", "nomic-embed-text")
-OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://localhost:11434")
+BACKEND = os.getenv("LLM_BACKEND", "openai").lower()  
+CHAT_MODEL = os.getenv("CHAT_MODEL", "gpt-4o-mini")
+EMBED_MODEL = os.getenv("EMBED_MODEL", os.getenv("OPENAI_EMBED_MODEL", "text-embedding-3-small"))
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY") or os.getenv("LLM_OPENAI_API_KEY")
+OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://localhost:11434")
+CHROMA_DIR = os.getenv("CHROMA_DIR", "chroma_ucd")
+
 
 courses = pd.read_csv("data/courses.csv")
 
 # ---------- helpers ----------
 def to_minutes(hhmm: str) -> int:
-    t = datetime.strptime(hhmm, "%H:%M")
+    # expects 24-hour "HH:MM"
+    t = datetime.strptime(hhmm.strip(), "%H:%M")
     return t.hour * 60 + t.minute
 
 def has_time_conflict(df: pd.DataFrame, chosen_ids: list[str]):
@@ -57,7 +58,10 @@ def unmet_prereqs(df: pd.DataFrame, chosen_ids: list[str], prior_taken: set[str]
     missing = []
     have_now = set(chosen_ids)
     for cid in chosen_ids:
-        row = df[df["course_id"] == cid].iloc[0]
+        rows = df[df["course_id"] == cid]
+        if rows.empty:
+            continue  # skip unknown IDs
+        row = rows.iloc[0]
         prereq = str(row.get("prerequisites", "")).strip()
         if prereq:
             needed = [p.strip() for p in prereq.split(",") if p.strip()]
@@ -71,21 +75,17 @@ def parse_course_ids(text: str):
     return list(set(re.findall(r"[A-Z]{2,5}-\d{3,4}", text)))
 
 # ---------- retriever ----------
-emb = OllamaEmbeddings(model=EMBED_MODEL, base_url=OLLAMA_HOST)
-vs = Chroma(persist_directory="chroma_ucd", embedding_function=emb)
-# Warn if the vector store has no documents
-try:
-    if len(vs.get().get("ids", [])) == 0:
-        print("[warn] No embeddings found in 'chroma_ucd'. Run: python ingest.py")
-except Exception:
-    pass
-retriever = vs.as_retriever(search_kwargs={"k": 6})
-
-# ---------- model selection ----------
 if BACKEND == "openai":
-    llm = ChatOpenAI(api_key=OPENAI_API_KEY, model="gpt-4o-mini", temperature=0.2)
+    emb = OpenAIEmbeddings(model=EMBED_MODEL, api_key=OPENAI_API_KEY)
+    llm = ChatOpenAI(api_key=OPENAI_API_KEY, model=CHAT_MODEL, temperature=0.2)
 else:
+    from langchain_community.embeddings import OllamaEmbeddings
+    from langchain_community.chat_models import ChatOllama
+    emb = OllamaEmbeddings(model=EMBED_MODEL, base_url=OLLAMA_HOST)
     llm = ChatOllama(model=CHAT_MODEL, temperature=0.2, base_url=OLLAMA_HOST)
+
+vs = Chroma(persist_directory=CHROMA_DIR, embedding_function=emb)
+retriever = vs.as_retriever(search_kwargs={"k": 6})
 
 # ---------- prompt & chain ----------
 SYSTEM = """You are a helpful academic advisor for University of Colorado Denver.
@@ -107,7 +107,8 @@ def rag_answer(question: str) -> str:
 
 # ---------- CLI ----------
 def cli():
-    print("UCD Advisor (local Llama). Type 'exit' to quit.")
+    print("UCD Advisor (OpenAI). Type 'exit' to quit.")
+    id_set = set(courses["course_id"])
     while True:
         q = input("\nYou: ").strip()
         if q.lower() in {"exit", "quit"}:
@@ -116,7 +117,7 @@ def cli():
         print("\nAdvisor:", ans)
 
         # Validate suggested schedule (if any course IDs detected)
-        ids = [i for i in parse_course_ids(ans) if i in set(courses["course_id"])]
+        ids = [i for i in parse_course_ids(ans) if i in id_set]
         if ids:
             conflict, info = has_time_conflict(courses, ids)
             missing = unmet_prereqs(courses, ids)
@@ -139,7 +140,8 @@ api = FastAPI()
 @api.get("/advise")
 def advise(q: str):
     ans = rag_answer(q)
-    ids = [i for i in parse_course_ids(ans) if i in set(courses["course_id"])]
+    id_set = set(courses["course_id"])
+    ids = [i for i in parse_course_ids(ans) if i in id_set]
     conflict, info = has_time_conflict(courses, ids)
     missing = unmet_prereqs(courses, ids)
     total = courses[courses["course_id"].isin(ids)]["credits"].sum()
@@ -154,5 +156,5 @@ def advise(q: str):
 
 if __name__ == "__main__":
     # Choose one: CLI or API
-     uvicorn.run(api, host="0.0.0.0", port=8000)
-   # cli()
+    # cli()
+    uvicorn.run(api, host="0.0.0.0", port=8000)
