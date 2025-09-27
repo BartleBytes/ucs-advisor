@@ -11,6 +11,7 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 
 # ---------- env & data ----------
@@ -22,6 +23,7 @@ EMBED_MODEL = os.getenv("EMBED_MODEL", os.getenv("OPENAI_EMBED_MODEL", "text-emb
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY") or os.getenv("LLM_OPENAI_API_KEY")
 OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://localhost:11434")
 CHROMA_DIR = os.getenv("CHROMA_DIR", "chroma_ucd")
+ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "*")
 
 
 courses = pd.read_csv("data/courses.csv")
@@ -136,6 +138,19 @@ def cli():
 
 # ---------- FastAPI (optional) ----------
 api = FastAPI()
+
+if ALLOWED_ORIGINS.strip() == "*":
+    cors_origins = ["*"]
+else:
+    cors_origins = [origin.strip() for origin in ALLOWED_ORIGINS.split(",") if origin.strip()]
+
+api.add_middleware(
+    CORSMiddleware,
+    allow_origins=cors_origins,
+    allow_credentials=False,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 @api.get("/advise")
 def advise(q: str):
