@@ -1,6 +1,7 @@
 import os
 import re
 from datetime import datetime
+from typing import Optional
 
 import pandas as pd
 from dotenv import load_dotenv
@@ -14,6 +15,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 
+from data_loaders import load_course_catalog
+
 # ---------- env & data ----------
 load_dotenv()
 
@@ -26,12 +29,21 @@ CHROMA_DIR = os.getenv("CHROMA_DIR", "chroma_ucd")
 ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "*")
 
 
-courses = pd.read_csv("data/courses.csv")
+COURSE_CATALOG_PATH = os.getenv(
+    "COURSE_CATALOG_PATH",
+    "sources/Fall_2005_Class_List/Fall 2025 Class List_ZW.xlsx",
+)
+courses = load_course_catalog(COURSE_CATALOG_PATH)
 
 # ---------- helpers ----------
-def to_minutes(hhmm: str) -> int:
-    # expects 24-hour "HH:MM"
-    t = datetime.strptime(hhmm.strip(), "%H:%M")
+def to_minutes(hhmm: str | None) -> Optional[int]:
+    # Return minutes for valid "HH:MM" strings; tolerate blanks / malformed data.
+    if not hhmm:
+        return None
+    try:
+        t = datetime.strptime(hhmm.strip(), "%H:%M")
+    except (ValueError, AttributeError):
+        return None
     return t.hour * 60 + t.minute
 
 def has_time_conflict(df: pd.DataFrame, chosen_ids: list[str]):
@@ -40,6 +52,7 @@ def has_time_conflict(df: pd.DataFrame, chosen_ids: list[str]):
     # Normalize times to minutes for easy overlap checks
     chosen["start_m"] = chosen["start_time"].apply(to_minutes)
     chosen["end_m"] = chosen["end_time"].apply(to_minutes)
+    chosen = chosen[pd.notna(chosen["start_m"]) & pd.notna(chosen["end_m"])].copy()
 
     # Very simple day-bucket approach; expand as needed
     day_patterns = chosen["days"].unique()
