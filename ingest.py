@@ -52,6 +52,17 @@ def main():
     course_df = load_course_catalog(COURSE_CATALOG_PATH)
     logger.info("Loaded %d rows from course catalog %s", len(course_df), COURSE_CATALOG_PATH)
 
+    schedule_mask = (
+        course_df["days"].astype(str).str.strip().ne("")
+        & course_df["days"].astype(str).str.strip().ne("-")
+        & course_df["start_time"].astype(str).str.strip().ne("")
+        & course_df["end_time"].astype(str).str.strip().ne("")
+    )
+    skipped_rows = len(course_df) - int(schedule_mask.sum())
+    if skipped_rows:
+        logger.info("Skipping %d catalog rows with missing schedule info", skipped_rows)
+    course_df = course_df[schedule_mask].reset_index(drop=True)
+
     docs: list[Document] = []
     course_docs = 0
     plan_docs = 0
