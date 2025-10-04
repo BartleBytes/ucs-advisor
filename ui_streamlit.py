@@ -7,13 +7,13 @@ API_URL = os.getenv("API_URL", "http://127.0.0.1:8000/advise")
 
 SAMPLE_QUESTIONS = [
     "Select a sample question...",
-    "What are the core courses in [program, e.g., Marketing]?",
-    "What are the graduation requirements for [degree program, e.g., Accounting]?",
-    "What is the course information for [course name or ID]?",
-    "What are the time and location details for [course name or ID] in Fall 2025?",
+    "What are the core courses in Marketing?",
+    "What are the graduation requirements for Accounting?",
+    "What is the course information for Bana 6620?",
+    "What are the time and location details for ACCT 2220 in Fall 2025?",
     "What courses does Ziyi Wang teach in Fall 2025, and what is his email address?",
-    "What is the prerequisite for [course name or ID]?",
-    "What courses should a freshman in [degree program, e.g., Marketing] take in Semester 1?",
+    "What is the prerequisite for ACCT 2220 ?",
+    "What courses should a freshman in Business take in Semester 1?",
 ]
 
 if "question_input" not in st.session_state:
