@@ -66,7 +66,7 @@ def _credits_from_doc_text(doc_path: Path) -> list[tuple[str, float]]:
     except Exception:
         return []
     text = "\n".join(re.findall(r">([^<]+)<", xml))
-    pattern = re.compile(r"([A-Z]{2,5})\s*(\d{3,4})\s*-\s*[^\(]*\(([^\)]*Credits)\)")
+    pattern = re.compile(r"\b([A-Z]{2,5})\s*-?\s*(\d{3,4})\b[^\(]*\(([^\)]*Credits)\)")
     rows: list[tuple[str, float]] = []
     for subject, number, credit_str in pattern.findall(text):
         numbers = re.findall(r"\d+(?:\.\d+)?", credit_str)
