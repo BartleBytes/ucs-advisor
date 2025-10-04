@@ -4,6 +4,7 @@ import re
 import zipfile
 from pathlib import Path
 from datetime import time, datetime
+from typing import Iterable
 
 import pandas as pd
 
@@ -57,15 +58,21 @@ def _parse_credit_value(value: object) -> float | None:
         return None
 
 
-def _credits_from_doc_text(doc_path: Path) -> list[tuple[str, float]]:
-    if not doc_path.exists() or doc_path.name.startswith("~$"):
-        return []
+def _docx_text(path: Path) -> str:
+    if not path.exists() or path.name.startswith("~$"):
+        return ""
     try:
-        with zipfile.ZipFile(doc_path) as zf:
+        with zipfile.ZipFile(path) as zf:
             xml = zf.read("word/document.xml").decode("utf-8")
     except Exception:
+        return ""
+    return "\n".join(re.findall(r">([^<]+)<", xml))
+
+
+def _credits_from_doc_text(doc_path: Path) -> list[tuple[str, float]]:
+    text = _docx_text(doc_path)
+    if not text:
         return []
-    text = "\n".join(re.findall(r">([^<]+)<", xml))
     pattern = re.compile(r"\b([A-Z]{2,5})\s*-?\s*(\d{3,4})\b[^\(]*\(([^\)]*Credits)\)")
     rows: list[tuple[str, float]] = []
     for subject, number, credit_str in pattern.findall(text):
@@ -194,6 +201,96 @@ def load_degree_plan_credits(
     credits_df = pd.DataFrame(records, columns=["course_id", "credits"])
     return credits_df.groupby("course_id", as_index=False)["credits"].max()
 
+
+def _parse_course_descriptions(text: str) -> list[dict[str, str]]:
+    if not text:
+        return []
+    lines = [line.strip() for line in text.splitlines() if line.strip()]
+    entries: list[dict[str, str]] = []
+    i = 0
+    while i < len(lines):
+        header_match = re.match(r"^([A-Z]{2,5})\s*(\d{3,4})(?:\s*-\s*(.*))?$,?", lines[i])
+        if not header_match:
+            i += 1
+            continue
+
+        subject, number, title_part = header_match.groups()
+        i += 1
+        title = title_part.strip() if title_part else ""
+        # next line may contain title if not already captured
+        if not title and i < len(lines) and not lines[i].startswith("("):
+            title = lines[i]
+            i += 1
+
+        credits_text = ""
+        if i < len(lines) and lines[i].startswith("(") and "Credit" in lines[i]:
+            credits_text = lines[i].strip("()")
+            i += 1
+
+        description_parts: list[str] = []
+        prereq = ""
+        while i < len(lines):
+            if re.match(r"^([A-Z]{2,5})\s*\d{3,4}(?:\s*-.*)?$", lines[i]):
+                break
+            lowered = lines[i].lower()
+            if lowered.startswith("prereq"):
+                prereq_parts: list[str] = []
+                remainder = lines[i].split(":", 1)
+                if len(remainder) > 1 and remainder[1].strip():
+                    prereq_parts.append(remainder[1].strip())
+                i += 1
+                while i < len(lines):
+                    nxt = lines[i]
+                    nxt_lower = nxt.lower()
+                    if (
+                        (" -" in nxt or "credits" in nxt_lower)
+                        and re.match(r"^([A-Z]{2,5})\s*\d{3,4}(?:\s*-.*)?$", nxt)
+                    ) or nxt_lower.startswith("grading basis") or nxt_lower.startswith("restriction") or nxt_lower.startswith("typically offered") or nxt_lower.startswith("max hours"):
+                        break
+                    if nxt_lower.startswith("prereq"):
+                        break
+                    if nxt in {":", "-"}:
+                        i += 1
+                        continue
+                    prereq_parts.append(nxt.replace("\u00a0", " "))
+                    i += 1
+                prereq = " ".join(prereq_parts).strip()
+                if prereq:
+                    prereq = prereq.replace("\u00a0", " ")
+                continue
+            else:
+                description_parts.append(lines[i])
+                i += 1
+
+        entries.append(
+            {
+                "course_id": f"{subject}-{number}",
+                "title": title.strip(),
+                "credits_text": credits_text.strip(),
+                "description": " ".join(description_parts),
+                "prerequisites": prereq,
+            }
+        )
+
+    return entries
+
+
+def load_course_descriptions(doc_paths: Iterable[str]) -> pd.DataFrame:
+    records: list[dict[str, str]] = []
+    for path in doc_paths:
+        text = _docx_text(Path(path))
+        records.extend(_parse_course_descriptions(text))
+    if not records:
+        return pd.DataFrame(columns=["course_id", "prerequisites", "description"])
+    df = pd.DataFrame(records)
+    df = df.groupby("course_id", as_index=False).agg(
+        {
+            "prerequisites": lambda vals: "; ".join(sorted({v for v in vals if v})),
+            "description": lambda vals: " ".join(v for v in vals if v),
+        }
+    )
+    return df
+
 def _normalize_time(value: object) -> str:
     """Return times as HH:MM (24h)."""
     if pd.isna(value):
@@ -251,6 +348,9 @@ def load_course_catalog(
     else:
         df["credits"] = pd.to_numeric(df["credits"], errors="coerce").fillna(0.0)
 
+    df["prerequisites"] = ""
+    df["description"] = ""
+
     plan_path = degree_plan_path or os.getenv(
         "DEGREE_PLAN_PATH", "sources/Degree Plan Templates/Degree Plan Original.xlsx"
     )
@@ -270,8 +370,26 @@ def load_course_catalog(
             df["credits"] = df["credits_plan"].fillna(df["credits"])
             df = df.drop(columns=[col for col in df.columns if col.endswith("_plan")])
 
-    # No prerequisites column here; keep it blank so downstream logic works
-    df["prerequisites"] = ""
+    desc_paths_env = os.getenv(
+        "COURSE_DESCRIPTION_DOCS",
+        ",".join(
+            [
+                "sources/Business_Course_Catalog_Descriptions/undergraduate_business_course_descriptions.docx",
+                "sources/Business_Course_Catalog_Descriptions/graduate_business_course_descriptions.docx",
+            ]
+        ),
+    )
+    desc_paths = [p.strip() for p in desc_paths_env.split(",") if p.strip()]
+    if desc_paths:
+        desc_df = load_course_descriptions(desc_paths)
+        if not desc_df.empty:
+            df = df.merge(desc_df, on="course_id", how="left", suffixes=("", "_desc"))
+            if "prerequisites_desc" in df.columns:
+                df["prerequisites"] = df["prerequisites_desc"].fillna(df["prerequisites"])
+                df = df.drop(columns=["prerequisites_desc"])
+            if "description_desc" in df.columns:
+                df["description"] = df["description_desc"].fillna(df["description"])
+                df = df.drop(columns=["description_desc"])
 
     # Normalize instructor / modality strings
     df["instructor"] = df["instructor"].fillna("").astype(str).str.strip()
@@ -284,6 +402,6 @@ def load_course_catalog(
         "instructor", "instructor_email", "term", "campus", "modality",
         "section", "class_number", "location", "room",
         "building", "component", "session", "topic",
-        "subject", "catalog_number"
+        "subject", "catalog_number", "description"
     ]
     return df.reindex(columns=columns_for_app, fill_value="")

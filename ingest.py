@@ -79,7 +79,9 @@ def main():
             f"time: {r['start_time']}-{r['end_time']}\n"
             f"modality: {r['modality']}\n"
             f"campus: {r['campus']}\n"
-            f"location: {r['location']} {r['room']}\n"
+            f"location: {r['location']}\n"
+            f"building: {r['building']}\n"
+            f"room: {r['room']}\n"
             f"instructor: {r['instructor']}\n"
             f"instructor_email: {r['instructor_email']}\n"
             f"section: {r['section']}\n"
@@ -87,6 +89,7 @@ def main():
             f"component: {r['component']}\n"
             f"credits: {r['credits']}\n"
             f"prerequisites: {r['prerequisites']}\n"
+            f"description: {r['description']}\n"
         )
         docs.append(
             Document(
