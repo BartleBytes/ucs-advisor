@@ -94,7 +94,7 @@ def load_course_catalog(path: str, sheet_name: str | int = 0) -> pd.DataFrame:
     columns_for_app = [
         "course_id", "title", "credits", "days",
         "start_time", "end_time", "prerequisites",
-        "instructor", "term", "campus", "modality",
+        "instructor", "instructor_email", "term", "campus", "modality",
         "section", "class_number", "location", "room",
         "building", "component", "session", "topic",
         "subject", "catalog_number"

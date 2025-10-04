@@ -81,6 +81,7 @@ def main():
             f"campus: {r['campus']}\n"
             f"location: {r['location']} {r['room']}\n"
             f"instructor: {r['instructor']}\n"
+            f"instructor_email: {r['instructor_email']}\n"
             f"section: {r['section']}\n"
             f"class_number: {r['class_number']}\n"
             f"component: {r['component']}\n"
