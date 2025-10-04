@@ -79,22 +79,42 @@ def load_degree_plan_credits(path: str) -> pd.DataFrame:
         if credits_col is None:
             continue
 
-        name_col = None
+        priority_labels = [
+            "course",
+            "course id",
+            "course number",
+            "course#",
+            "course name",
+        ]
+        candidate_cols: list[tuple[str, pd.Series]] = []
         for candidate in df.columns:
             label = str(candidate).strip().lower()
-            if label in {"course", "degree requirement"}:
-                name_col = candidate
-                break
-        if name_col is None:
+            if label in priority_labels:
+                normalized = df[candidate].apply(_normalize_course_id)
+                candidate_cols.append((candidate, normalized))
+        for candidate in df.columns:
+            label = str(candidate).strip().lower()
+            if label == "degree requirement":
+                normalized = df[candidate].apply(_normalize_course_id)
+                candidate_cols.append((candidate, normalized))
+        name_col = None
+        normalized_ids = None
+        for candidate, normalized in candidate_cols:
+            if normalized.dropna().empty:
+                continue
+            name_col = candidate
+            normalized_ids = normalized
+            break
+        if name_col is None or normalized_ids is None:
             continue
 
         course_names = df[name_col].astype(str).str.strip()
         credit_values = pd.to_numeric(df[credits_col], errors="coerce")
 
-        for raw_name, credit in zip(course_names, credit_values):
+        for raw_name, credit, norm_id in zip(course_names, credit_values, normalized_ids):
             if pd.isna(credit):
                 continue
-            course_id = _normalize_course_id(raw_name)
+            course_id = norm_id or _normalize_course_id(raw_name)
             if not course_id:
                 continue
             records.append((course_id, float(credit)))
@@ -109,15 +129,17 @@ def _normalize_time(value: object) -> str:
     """Return times as HH:MM (24h)."""
     if pd.isna(value):
         return ""
-    if isinstance(value, time):
-        return value.strftime("%H:%M")
-    if isinstance(value, datetime):
-        return value.strftime("%H:%M")
+    if isinstance(value, (time, datetime)):
+        ts = pd.to_datetime(value)
+        return ts.round("min").strftime("%H:%M")
     s = str(value).strip()
     if not s or s in {"0", "00:00", "00:00:00"}:
         return ""
     try:
-        return pd.to_datetime(s).strftime("%H:%M")
+        ts = pd.to_datetime(s)
+        if hasattr(ts, "round"):
+            ts = ts.round("min")
+        return ts.strftime("%H:%M")
     except Exception:
         return s  # fall back to the raw string
 

@@ -9,7 +9,7 @@ SAMPLE_QUESTIONS = [
     "Select a sample question...",
     "What are the core courses in Marketing?",
     "What are the graduation requirements for Accounting?",
-    "What is the course information for Bana 6620?",
+    "What is the course information for BANA 6620?",
     "What are the time and location details for ACCT 2220 in Fall 2025?",
     "What courses does Ziyi Wang teach in Fall 2025, and what is his email address?",
     "What is the prerequisite for ACCT 2220 ?",
