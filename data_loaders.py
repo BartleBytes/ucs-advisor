@@ -1,6 +1,7 @@
 # data_loaders.py
 import os
 import re
+import zipfile
 from pathlib import Path
 from datetime import time, datetime
 
@@ -56,17 +57,42 @@ def _parse_credit_value(value: object) -> float | None:
         return None
 
 
-def load_degree_plan_credits(path: str, plan_doc_dir: str | None = None) -> pd.DataFrame:
-    """Extract course credits from the degree plan workbook and optional plan docs."""
-    file_path = Path(path)
-    if not file_path.exists() or file_path.name.startswith("~$"):
-        return pd.DataFrame(columns=["course_id", "credits"])
-
-    records: list[tuple[str, float]] = []
+def _credits_from_doc_text(doc_path: Path) -> list[tuple[str, float]]:
+    if not doc_path.exists() or doc_path.name.startswith("~$"):
+        return []
     try:
-        xls = pd.ExcelFile(file_path)
+        with zipfile.ZipFile(doc_path) as zf:
+            xml = zf.read("word/document.xml").decode("utf-8")
     except Exception:
-        xls = None
+        return []
+    text = "\n".join(re.findall(r">([^<]+)<", xml))
+    pattern = re.compile(r"([A-Z]{2,5})\s*(\d{3,4})\s*-\s*[^\(]*\(([^\)]*Credits)\)")
+    rows: list[tuple[str, float]] = []
+    for subject, number, credit_str in pattern.findall(text):
+        numbers = re.findall(r"\d+(?:\.\d+)?", credit_str)
+        if not numbers:
+            continue
+        credit_val = float(numbers[-1])
+        course_id = f"{subject}-{number}"
+        rows.append((course_id, credit_val))
+    return rows
+
+
+def load_degree_plan_credits(
+    path: str,
+    plan_doc_dir: str | None = None,
+    grad_doc_path: str | None = None,
+) -> pd.DataFrame:
+    """Extract course credits from the degree plan workbook and supplemental docs."""
+    records: list[tuple[str, float]] = []
+
+    file_path = Path(path) if path else None
+    xls = None
+    if file_path and file_path.exists() and not file_path.name.startswith("~$"):
+        try:
+            xls = pd.ExcelFile(file_path)
+        except Exception:
+            xls = None
 
     if xls is not None:
         for sheet in xls.sheet_names:
@@ -158,6 +184,10 @@ def load_degree_plan_credits(path: str, plan_doc_dir: str | None = None) -> pd.D
                                 continue
                             records.append((course_id, credit))
 
+    if grad_doc_path:
+        grad_rows = _credits_from_doc_text(Path(grad_doc_path))
+        records.extend(grad_rows)
+
     if not records:
         return pd.DataFrame(columns=["course_id", "credits"])
 
@@ -225,8 +255,16 @@ def load_course_catalog(
         "DEGREE_PLAN_PATH", "sources/Degree Plan Templates/Degree Plan Original.xlsx"
     )
     plan_doc_dir = os.getenv("FOUR_YEAR_PLAN_DIR", "sources/4-Year_Plans_2024-25")
-    if plan_path:
-        plan_df = load_degree_plan_credits(plan_path, plan_doc_dir=plan_doc_dir)
+    grad_doc_path = os.getenv(
+        "GRAD_COURSE_DOC",
+        "sources/Business_Course_Catalog_Descriptions/graduate_business_course_descriptions.docx",
+    )
+    if plan_path or grad_doc_path:
+        plan_df = load_degree_plan_credits(
+            plan_path,
+            plan_doc_dir=plan_doc_dir,
+            grad_doc_path=grad_doc_path,
+        )
         if not plan_df.empty:
             df = df.merge(plan_df, on="course_id", how="left", suffixes=("", "_plan"))
             df["credits"] = df["credits_plan"].fillna(df["credits"])
