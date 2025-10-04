@@ -48,76 +48,115 @@ def _normalize_course_id(raw: str | None) -> str | None:
     return re.sub(r"\s+", "-", match.group())
 
 
-def load_degree_plan_credits(path: str) -> pd.DataFrame:
-    """Extract course credits from the degree plan workbook."""
+def _parse_credit_value(value: object) -> float | None:
+    try:
+        credit = float(str(value).strip())
+        return credit
+    except (TypeError, ValueError):
+        return None
+
+
+def load_degree_plan_credits(path: str, plan_doc_dir: str | None = None) -> pd.DataFrame:
+    """Extract course credits from the degree plan workbook and optional plan docs."""
     file_path = Path(path)
     if not file_path.exists() or file_path.name.startswith("~$"):
         return pd.DataFrame(columns=["course_id", "credits"])
 
     records: list[tuple[str, float]] = []
-    xls = pd.ExcelFile(file_path)
+    try:
+        xls = pd.ExcelFile(file_path)
+    except Exception:
+        xls = None
 
-    for sheet in xls.sheet_names:
-        raw = xls.parse(sheet, header=None)
-        if raw.empty:
-            continue
+    if xls is not None:
+        for sheet in xls.sheet_names:
+            raw = xls.parse(sheet, header=None)
+            if raw.empty:
+                continue
 
-        header_idx = None
-        for idx, row in raw.iterrows():
-            values = row.astype(str).str.strip()
-            if "Credits" in values.values:
-                header_idx = idx
+            header_idx = None
+            for idx, row in raw.iterrows():
+                values = row.astype(str).str.strip()
+                if "Credits" in values.values:
+                    header_idx = idx
+                    break
+            if header_idx is None:
+                continue
+
+            header = raw.iloc[header_idx].astype(str).str.strip()
+            df = raw.iloc[header_idx + 1 :].reset_index(drop=True)
+            df.columns = header
+
+            credits_col = next((c for c in df.columns if str(c).strip().lower() == "credits"), None)
+            if credits_col is None:
+                continue
+
+            priority_labels = [
+                "course",
+                "course id",
+                "course number",
+                "course#",
+                "course name",
+            ]
+            candidate_cols: list[tuple[str, pd.Series]] = []
+            for candidate in df.columns:
+                label = str(candidate).strip().lower()
+                if label in priority_labels:
+                    normalized = df[candidate].apply(_normalize_course_id)
+                    candidate_cols.append((candidate, normalized))
+            for candidate in df.columns:
+                label = str(candidate).strip().lower()
+                if label == "degree requirement":
+                    normalized = df[candidate].apply(_normalize_course_id)
+                    candidate_cols.append((candidate, normalized))
+            name_col = None
+            normalized_ids = None
+            for candidate, normalized in candidate_cols:
+                if normalized.dropna().empty:
+                    continue
+                name_col = candidate
+                normalized_ids = normalized
                 break
-        if header_idx is None:
-            continue
-
-        header = raw.iloc[header_idx].astype(str).str.strip()
-        df = raw.iloc[header_idx + 1 :].reset_index(drop=True)
-        df.columns = header
-
-        credits_col = next((c for c in df.columns if str(c).strip().lower() == "credits"), None)
-        if credits_col is None:
-            continue
-
-        priority_labels = [
-            "course",
-            "course id",
-            "course number",
-            "course#",
-            "course name",
-        ]
-        candidate_cols: list[tuple[str, pd.Series]] = []
-        for candidate in df.columns:
-            label = str(candidate).strip().lower()
-            if label in priority_labels:
-                normalized = df[candidate].apply(_normalize_course_id)
-                candidate_cols.append((candidate, normalized))
-        for candidate in df.columns:
-            label = str(candidate).strip().lower()
-            if label == "degree requirement":
-                normalized = df[candidate].apply(_normalize_course_id)
-                candidate_cols.append((candidate, normalized))
-        name_col = None
-        normalized_ids = None
-        for candidate, normalized in candidate_cols:
-            if normalized.dropna().empty:
+            if name_col is None or normalized_ids is None:
                 continue
-            name_col = candidate
-            normalized_ids = normalized
-            break
-        if name_col is None or normalized_ids is None:
-            continue
 
-        course_names = df[name_col].astype(str).str.strip()
-        credit_values = pd.to_numeric(df[credits_col], errors="coerce")
+            course_names = df[name_col].astype(str).str.strip()
+            credit_values = pd.to_numeric(df[credits_col], errors="coerce")
 
-        for raw_name, credit, norm_id in zip(course_names, credit_values, normalized_ids):
-            if pd.isna(credit):
-                continue
-            course_id = norm_id or _normalize_course_id(raw_name)
-            if not course_id:
-                continue
-            records.append((course_id, float(credit)))
+            for raw_name, credit, norm_id in zip(course_names, credit_values, normalized_ids):
+                if pd.isna(credit):
+                    continue
+                course_id = norm_id or _normalize_course_id(raw_name)
+                if not course_id:
+                    continue
+                records.append((course_id, float(credit)))
+
+    if plan_doc_dir:
+        doc_dir = Path(plan_doc_dir)
+        if doc_dir.exists():
+            try:
+                from docx import Document as DocxDocument
+            except ImportError:
+                DocxDocument = None
+            if DocxDocument:
+                for path in doc_dir.glob("*.docx"):
+                    if path.name.startswith("~$"):
+                        continue
+                    try:
+                        doc = DocxDocument(path)
+                    except Exception:
+                        continue
+                    for table in doc.tables:
+                        for row in table.rows:
+                            if len(row.cells) < 2:
+                                continue
+                            raw_course = row.cells[0].text.strip()
+                            raw_credit = row.cells[-1].text.strip()
+                            course_id = _normalize_course_id(raw_course)
+                            credit = _parse_credit_value(raw_credit)
+                            if not course_id or credit is None:
+                                continue
+                            records.append((course_id, credit))
 
     if not records:
         return pd.DataFrame(columns=["course_id", "credits"])
@@ -185,8 +224,9 @@ def load_course_catalog(
     plan_path = degree_plan_path or os.getenv(
         "DEGREE_PLAN_PATH", "sources/Degree Plan Templates/Degree Plan Original.xlsx"
     )
+    plan_doc_dir = os.getenv("FOUR_YEAR_PLAN_DIR", "sources/4-Year_Plans_2024-25")
     if plan_path:
-        plan_df = load_degree_plan_credits(plan_path)
+        plan_df = load_degree_plan_credits(plan_path, plan_doc_dir=plan_doc_dir)
         if not plan_df.empty:
             df = df.merge(plan_df, on="course_id", how="left", suffixes=("", "_plan"))
             df["credits"] = df["credits_plan"].fillna(df["credits"])
@@ -199,7 +239,7 @@ def load_course_catalog(
     df["instructor"] = df["instructor"].fillna("").astype(str).str.strip()
     df["modality"] = df["modality"].fillna("").astype(str).str.strip()
 
-    # Select and order the fields your app expects, keeping extras if useful
+    # Select and order the fields the app expects, keeping extras if useful
     columns_for_app = [
         "course_id", "title", "credits", "days",
         "start_time", "end_time", "prerequisites",
