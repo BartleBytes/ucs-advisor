@@ -1,5 +1,6 @@
 import logging
 import os
+import shutil
 from pathlib import Path
 
 import pandas as pd
@@ -186,6 +187,9 @@ def main():
         emb = OllamaEmbeddings(model=embed_model, base_url=ollama_host)
 
     persist_dir = os.getenv("CHROMA_DIR", "chroma_ucd")
+    if os.path.exists(persist_dir):
+        logger.info("Removing existing vector store at %s", persist_dir)
+        shutil.rmtree(persist_dir)
     vs = Chroma.from_documents(docs, emb, persist_directory=persist_dir)
     vs.persist()
     logger.info("Index built at %s/ with %d documents", persist_dir, len(docs))
