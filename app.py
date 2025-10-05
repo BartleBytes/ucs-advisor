@@ -100,7 +100,7 @@ else:
     llm = ChatOllama(model=CHAT_MODEL, temperature=0.2, base_url=OLLAMA_HOST)
 
 vs = Chroma(persist_directory=CHROMA_DIR, embedding_function=emb)
-retriever = vs.as_retriever(search_kwargs={"k": 6})
+retriever = vs.as_retriever(search_kwargs={"k": 8})
 
 # ---------- prompt & chain ----------
 SYSTEM = """You are a helpful academic advisor for University of Colorado Denver.
