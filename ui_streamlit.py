@@ -26,10 +26,10 @@ def _set_question_from_sample():
         st.session_state["question_input"] = choice
 
 st.set_page_config(page_title="UCD Advisor", page_icon="🎓", layout="centered")
-st.title("🎓 UCD Advisor (Local Llama RAG)")
+st.title("🎓 UCD Advisor (Streamlit RAG Aplication)")
 
 st.selectbox(
-    "Need inspiration?",
+    "Try one of these examples:",
     SAMPLE_QUESTIONS,
     key="sample_question",
     on_change=_set_question_from_sample,
