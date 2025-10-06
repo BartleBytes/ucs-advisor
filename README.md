@@ -1,6 +1,6 @@
 # 🎓 UCD Advisor
 
-AI-assisted academic advising for the University of Colorado Denver. The service combines LangChain retrieval over a curated course catalog with OpenAI (or Ollama) models to propose schedules, highlight conflicts, and validate prerequisites. It can be run locally, deployed as a FastAPI backend (Render), and surfaced through a Streamlit UI (Streamlit Cloud or Render).
+AI-assisted academic advising for the University of Colorado Denver. The service combines LangChain retrieval over a curated course catalog with OpenAI model to propose schedules, highlight conflicts, and validate prerequisites. It can be run locally, deployed as a FastAPI backend (Render), and surfaced through a Streamlit UI (Streamlit Cloud or Render).
 
 ---
 
@@ -13,7 +13,7 @@ AI-assisted academic advising for the University of Colorado Denver. The service
 ## 🧱 Project Structure
 
 - `app.py` – FastAPI service and optional CLI entry point.
-- `ingest.py` – builds the Chroma vector store from `data/courses.csv`.
+- `ingest.py` – builds the Chroma vector store from the Excel catalog (`sources/Fall_2005_Class_List/...xlsx`) plus supporting plan/description documents.
 - `ui_streamlit.py` – Streamlit client that calls the `/advise` API.
 - `requirements_backend.txt` – dependencies for the FastAPI/ingest stack.
 - `requirements.txt` – lightweight deps for the Streamlit UI (`streamlit`, `requests`).
@@ -51,12 +51,10 @@ streamlit run ui_streamlit.py
 
 ---
 
-## 🔁 Switching Backends
+## Backend
 
 - **OpenAI (default)**: set `LLM_BACKEND=openai`, provide `OPENAI_API_KEY`, choose an OpenAI embedding model (e.g., `text-embedding-3-small`).
-- **Ollama (optional)**: set `LLM_BACKEND=ollama`, ensure `OLLAMA_HOST` points to a running Ollama server, and pull the required models (`llama3`, `nomic-embed-text`). Re-run `python ingest.py` whenever you change backends or embeddings so the persisted vectors match the runtime model.
 
----
 
 ## 🌐 Deployment
 
@@ -78,7 +76,7 @@ streamlit run ui_streamlit.py
    - `EMBED_MODEL=text-embedding-3-small` (or override)
    - `ALLOWED_ORIGINS=https://<your-streamlit-app>.streamlit.app`
 
-Render persists the generated `chroma_ucd/` directory between deploys; rerun `python ingest.py` after data/model changes.
+Render persists the generated `chroma_ucd/` directory between deploys; rerun `python ingest.py` after data/model changes. The script automatically deletes the previous store before rebuilding so the new embeddings replace the old ones.
 
 ### Frontend (Streamlit Cloud)
 
@@ -120,7 +118,6 @@ Use the CLI (`python app.py`) for an interactive terminal experience with the sa
 | `OPENAI_API_KEY` / `LLM_OPENAI_API_KEY` | OpenAI credentials | none |
 | `CHAT_MODEL` | Chat LLM name | `gpt-4o-mini` |
 | `EMBED_MODEL` | Embedding model id | `text-embedding-3-small` |
-| `OLLAMA_HOST` | Ollama endpoint | `http://localhost:11434` |
 | `CHROMA_DIR` | Persisted vector store path | `chroma_ucd` |
 | `ALLOWED_ORIGINS` | Comma-separated CORS origins | `*` |
 | `API_URL` | Streamlit → API URL (UI only) | `http://127.0.0.1:8000/advise` |
@@ -137,7 +134,7 @@ If the assistant proposes conflicts or missing prerequisites, they surface in th
 
 ---
 
-## 🧪 Next Steps
+## 🧪 Possible Next Steps
 
 - Harden authentication/rate limiting for public access.
 - Add automated tests (unit tests for conflict/prereq helpers).

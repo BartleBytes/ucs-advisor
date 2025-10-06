@@ -26,7 +26,7 @@ def _set_question_from_sample():
         st.session_state["question_input"] = choice
 
 st.set_page_config(page_title="UCD Advisor", page_icon="🎓", layout="centered")
-st.title("🎓 UCD Advisor (Streamlit RAG Aplication)")
+st.title("🎓 UCD Advisor (Streamlit RAG Application)")
 
 st.selectbox(
     "Try one of these examples:",
@@ -54,14 +54,14 @@ if submitted and question:
         st.subheader("Advisor")
         st.write(data["answer"])
 
-        st.subheader("Validation")
-        st.write(f"**Suggested IDs:** {data['suggested_course_ids']}")
-        st.write(f"**Total credits:** {data['total_credits']}")
-        st.write(f"**Time conflict:** {data['time_conflict']}")
-        if data["conflict_info"]:
-            st.write(f"**Conflict details:** {data['conflict_info']}")
-        if data["unmet_prerequisites"]:
-            st.write("**Unmet prerequisites:**")
-            st.write(data["unmet_prerequisites"])
+        # st.subheader("Validation")
+        # st.write(f"**Suggested IDs:** {data['suggested_course_ids']}")
+        # st.write(f"**Total credits:** {data['total_credits']}")
+        # st.write(f"**Time conflict:** {data['time_conflict']}")
+        # if data["conflict_info"]:
+        #     st.write(f"**Conflict details:** {data['conflict_info']}")
+        # if data["unmet_prerequisites"]:
+        #     st.write("**Unmet prerequisites:**")
+        #     st.write(data["unmet_prerequisites"])
     else:
         st.error(f"API error {r.status_code}: {r.text}")
